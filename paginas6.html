@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Galaxia Amor PRO</title>
+<style>
+body { margin:0; overflow:hidden; background:black; }
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- CONTROLES -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+
+<!-- GLOW OPTIMIZADO -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<script>
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.002);
+
+// 🎥 CÁMARA
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000);
+camera.position.set(0, 200, 400);
+
+// 🖥️ RENDER
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// 🎮 CONTROLES
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 30;
+controls.maxDistance = 300;
+
+// ✨ GLOW SEGURO
+let composer;
+
+try {
+  composer = new THREE.EffectComposer(renderer);
+
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  const bloom = new THREE.UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight),
+    0.8, // intensidad segura
+    0.3,
+    0.9
+  );
+
+  composer.addPass(bloom);
+
+} catch(e){
+  console.log("Glow no soportado");
+}
+
+// 🌌 GALAXIA
+const galaxyGeo = new THREE.BufferGeometry();
+const count = 50000;
+
+const pos = new Float32Array(count*3);
+const colors = new Float32Array(count*3);
+
+for(let i=0;i<count;i++){
+  const i3 = i*3;
+
+  const r = Math.random()*90;
+  const spin = r*0.5;
+  const branch = (i%6)/6*Math.PI*2;
+
+  pos[i3] = Math.cos(branch+spin)*r;
+  pos[i3+1] = (Math.random()-0.5)*3;
+  pos[i3+2] = Math.sin(branch+spin)*r;
+
+  const c = new THREE.Color(0xff00aa).lerp(new THREE.Color(0x2200ff), r/90);
+
+  colors[i3]=c.r;
+  colors[i3+1]=c.g;
+  colors[i3+2]=c.b;
+}
+
+galaxyGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+galaxyGeo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+
+const galaxy = new THREE.Points(
+  galaxyGeo,
+  new THREE.PointsMaterial({
+    size:1,
+    vertexColors:true,
+    transparent:true,
+    blending:THREE.AdditiveBlending,
+    depthWrite:false
+  })
+);
+
+scene.add(galaxy);
+
+// ❤️ CORAZÓN
+const heartGeo = new THREE.BufferGeometry();
+const heartPos = new Float32Array(3000*3);
+
+for(let i=0;i<3000;i++){
+  const t = Math.random()*Math.PI*2;
+
+  const x = 16*Math.pow(Math.sin(t),3);
+  const y = 13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
+
+  heartPos[i*3] = x*0.6;
+  heartPos[i*3+1] = y*0.6 + 40;
+  heartPos[i*3+2] = 0;
+}
+
+heartGeo.setAttribute('position', new THREE.BufferAttribute(heartPos,3));
+
+const heart = new THREE.Points(
+  heartGeo,
+  new THREE.PointsMaterial({
+    color:0xff0077,
+    size:1,
+    blending:THREE.AdditiveBlending
+  })
+);
+
+scene.add(heart);
+
+// 💬 FRASES
+const grupoFrases = new THREE.Group();
+
+const frases = ["Te amo ❤️","Mi amor","Siempre contigo","Eres mi todo"];
+
+for(let i=0;i<80;i++){
+  const text = frases[i%frases.length];
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = 512;
+  canvas.height = 256;
+
+  ctx.fillStyle="white";
+  ctx.font="bold 30px Arial";
+  ctx.fillText(text,20,130);
+
+  const texture = new THREE.CanvasTexture(canvas);
+
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({map:texture})
+  );
+
+  const r = Math.random()*90;
+  const a = Math.random()*Math.PI*2;
+
+  sprite.position.set(Math.cos(a)*r,(Math.random()-0.5)*30,Math.sin(a)*r);
+  sprite.scale.set(20,10,1);
+
+  grupoFrases.add(sprite);
+}
+
+scene.add(grupoFrases);
+
+// 🧸 IMÁGENES
+const loader = new THREE.TextureLoader();
+
+const urls = [
+"https://i.imgur.com/4AiXzf8.jpeg",
+"https://i.imgur.com/Z6X9K0K.jpeg"
+];
+
+urls.forEach(url=>{
+  const tex = loader.load(url);
+
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({map:tex})
+  );
+
+  sprite.position.set(
+    (Math.random()-0.5)*120,
+    Math.random()*50,
+    (Math.random()-0.5)*120
+  );
+
+  sprite.scale.set(15,15,1);
+  scene.add(sprite);
+});
+
+// 🎥 INTRO
+let intro = true;
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  galaxy.rotation.y += 0.0015;
+  heart.rotation.y += 0.002;
+  grupoFrases.rotation.y += 0.002;
+
+  if(intro){
+    camera.position.z -= 2;
+    if(camera.position.z <= 120){
+      intro = false;
+    }
+  }
+
+  controls.update();
+
+  if(composer){
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
+}
+
+animate();
+
+// responsive
+addEventListener("resize", ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  if(composer) composer.setSize(innerWidth,innerHeight);
+});
+</script>
+
+</body>
+</html>
